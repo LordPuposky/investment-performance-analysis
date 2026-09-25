@@ -96,6 +96,28 @@ def get_annual_volatility(df):
     return yearly
 
 
+def plot_annual_volatility(yearly_df, output_file="annual_volatility.png"):
+    """
+    Create a simple bar chart of market volatility by year, and save it
+    as an image file. This is optional (not required by the module),
+    but makes it easier to explain Question 3 visually in the video.
+    """
+    import matplotlib.pyplot as plt
+
+    plt.figure(figsize=(8, 5))
+    plt.bar(
+        yearly_df["year"].astype(str),
+        yearly_df["market_volatility"],
+        color="steelblue"
+    )
+    plt.title("Average S&P 500 Market Volatility by Year")
+    plt.xlabel("Year")
+    plt.ylabel("Volatility (std. dev. of daily returns)")
+    plt.tight_layout()
+    plt.savefig(output_file)
+    print(f"\nChart saved as {output_file}")
+
+
 if __name__ == "__main__":
     data = data_loader.load_data()
     summary = calculate_stock_summary(data)
@@ -118,3 +140,5 @@ if __name__ == "__main__":
         yearly_volatility["market_volatility"].idxmax(), "year"
     ]
     print(f"\nMost volatile year: {most_volatile_year}")
+
+    plot_annual_volatility(yearly_volatility)
