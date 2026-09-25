@@ -75,6 +75,27 @@ def get_top_growth_and_decline(summary_df, top_n=10):
     return top_growth, top_decline
 
 
+def get_annual_volatility(df):
+    """
+    Question 3: How did average market volatility change year by year?
+
+    For each year in the dataset, this pools together the daily returns
+    of every stock and calculates the standard deviation, which gives a
+    single "market volatility" number per year. A higher number means
+    the market as a whole moved more sharply (more risk) that year.
+
+    Returns a DataFrame with one row per year, sorted by year.
+    """
+    df = data_loader.add_daily_returns(df)
+    df["year"] = df["date"].dt.year
+
+    yearly = df.groupby("year")["daily_return"].std().reset_index()
+    yearly.columns = ["year", "market_volatility"]
+    yearly["market_volatility"] = yearly["market_volatility"].round(4)
+
+    return yearly
+
+
 if __name__ == "__main__":
     data = data_loader.load_data()
     summary = calculate_stock_summary(data)
@@ -89,3 +110,11 @@ if __name__ == "__main__":
 
     print("\n=== Question 2: Biggest drop over 5 years (top 10) ===")
     print(decline[["Name", "total_return_pct"]].to_string(index=False))
+
+    print("\n=== Question 3: Average market volatility by year ===")
+    yearly_volatility = get_annual_volatility(data)
+    print(yearly_volatility.to_string(index=False))
+    most_volatile_year = yearly_volatility.loc[
+        yearly_volatility["market_volatility"].idxmax(), "year"
+    ]
+    print(f"\nMost volatile year: {most_volatile_year}")
