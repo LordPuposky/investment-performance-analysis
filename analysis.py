@@ -1,3 +1,4 @@
+# analysis.py
 # This file answers the three questions about the S&P 500 dataset.
 # It works together with data_loader.py, which loads and cleans the data.
 
@@ -5,26 +6,20 @@ import pandas as pd
 import data_loader
 
 
-def get_risk_adjusted_return(df, top_n=10):
+def calculate_stock_summary(df):
     """
-    Question 1: Which stocks had the best risk-adjusted return in the period?
+    Build one summary row per stock, with the numbers needed to answer
+    all three questions:
+      - total_return_pct: overall percent change over the 5-year period.
+      - volatility: standard deviation of daily returns (risk).
+      - risk_adjusted_return: total_return_pct divided by volatility.
 
-    For each stock, calculate:
-        - total_return: the overall percent change from the first to the
-        last closing price in the dataset (5 years).
-        - volatility: the standard deviation of daily returns, which is a
-        common way to measure risk (how much the price jumps around).
-        - risk_adjusted_return: total_return divided by volatility. This is
-        a simplified version of the idea behind the Sharpe ratio: a
-        higher number means more return for each unit of risk taken.
-
-    Returns a DataFrame with the top_n stocks, sorted by risk-adjusted
-    return, from best to worst.
+    This is shared logic, used by get_risk_adjusted_return() and
+    get_top_growth_and_decline(), so the calculation is only written once.
     """
     df = data_loader.add_daily_returns(df)
 
     results = []
-    # Group the data by stock, so we calculate one summary per company.
     for stock_name, stock_data in df.groupby("Name"):
         stock_data = stock_data.sort_values("date")
 
@@ -32,10 +27,8 @@ def get_risk_adjusted_return(df, top_n=10):
         last_close = stock_data["close"].iloc[-1]
         total_return = (last_close - first_close) / first_close * 100
 
-        # Standard deviation of daily returns = volatility (risk).
         volatility = stock_data["daily_return"].std()
 
-        # Avoid dividing by zero for stocks with almost no price movement.
         if volatility and volatility > 0:
             risk_adjusted_return = total_return / volatility
         else:
@@ -48,17 +41,51 @@ def get_risk_adjusted_return(df, top_n=10):
             "risk_adjusted_return": round(risk_adjusted_return, 2),
         })
 
-    results_df = pd.DataFrame(results)
-    results_df = results_df.sort_values(
-        "risk_adjusted_return", ascending=False
-    ).reset_index(drop=True)
+    return pd.DataFrame(results)
 
-    return results_df.head(top_n)
+
+def get_risk_adjusted_return(summary_df, top_n=10):
+    """
+    Question 1: Which stocks had the best risk-adjusted return in the period?
+    A higher risk_adjusted_return means more return for each unit of risk.
+    Returns the top_n stocks, sorted from best to worst.
+    """
+    return summary_df.sort_values(
+        "risk_adjusted_return", ascending=False
+    ).reset_index(drop=True).head(top_n)
+
+
+def get_top_growth_and_decline(summary_df, top_n=10):
+    """
+    Question 2: Which 10 stocks had the highest percentage growth over
+    5 years, and which had the biggest drop?
+
+    Returns two DataFrames: the top_n stocks with the highest total
+    return, and the top_n stocks with the lowest (most negative) total
+    return, both sorted so the most extreme value is first.
+    """
+    top_growth = summary_df.sort_values(
+        "total_return_pct", ascending=False
+    ).reset_index(drop=True).head(top_n)
+
+    top_decline = summary_df.sort_values(
+        "total_return_pct", ascending=True
+    ).reset_index(drop=True).head(top_n)
+
+    return top_growth, top_decline
 
 
 if __name__ == "__main__":
     data = data_loader.load_data()
+    summary = calculate_stock_summary(data)
 
     print("=== Question 1: Best risk-adjusted return (top 10) ===")
-    top_stocks = get_risk_adjusted_return(data, top_n=10)
+    top_stocks = get_risk_adjusted_return(summary, top_n=10)
     print(top_stocks.to_string(index=False))
+
+    print("\n=== Question 2: Highest growth over 5 years (top 10) ===")
+    growth, decline = get_top_growth_and_decline(summary, top_n=10)
+    print(growth[["Name", "total_return_pct"]].to_string(index=False))
+
+    print("\n=== Question 2: Biggest drop over 5 years (top 10) ===")
+    print(decline[["Name", "total_return_pct"]].to_string(index=False))
