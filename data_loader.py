@@ -1,5 +1,5 @@
 # This file is responsible for loading the S&P 500 dataset and cleaning it
-# before any analysis is done. It is used by main.py.
+# before any analysis is done. It is used by analysis.py.
 #
 # Dataset source: "S&P 500 stock data" by camnugent on Kaggle
 # https://www.kaggle.com/datasets/camnugent/sandp500
